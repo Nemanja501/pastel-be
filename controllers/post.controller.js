@@ -1,6 +1,7 @@
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
 const {validationResult} = require('express-validator');
+const constants = require('../shared/constants');
 
 exports.addPost = async (req, res, next) =>{
     const errors = validationResult(req);
@@ -26,4 +27,10 @@ exports.addPost = async (req, res, next) =>{
     userInDatabase.posts.push(postInDatabase);
     await userInDatabase.save();
     return res.status(201).json({message: 'Post added successfully'});
+}
+
+exports.getFeedPosts = async (req, res, next) =>{
+    const page = req.query.page || 1;
+    const totalItems = await Post.find().countDocuments();
+    const posts = await Post.find().skip((page - 1) * constants.PER_PAGE).limit(constants.PER_PAGE);
 }

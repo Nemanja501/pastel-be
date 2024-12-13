@@ -25,6 +25,7 @@ app.use(postRoutes);
 
 app.use((err, req, res, next) =>{
   const message = err.message || 'An error occurred';
+  console.log(err.statusCode);
   const code = err.statusCode || 500;
   const data = err.data || [];
   res.status(code).json({message, data});
