@@ -17,10 +17,6 @@ const userSchema = new Schema({
         type: String, 
         requred: true
     },
-    profilePicUrl: {
-        type: String,
-        default: null
-    },
     posts: [
         {
             type: Schema.Types.ObjectId,
