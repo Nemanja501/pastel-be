@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 
 const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
+const userRoutes = require('./routes/user.routes');
 
 const app = express();
 const port = 3000;
@@ -22,6 +23,7 @@ app.get('/', (req, res) => {
 
 app.use(authRoutes);
 app.use(postRoutes);
+app.use(userRoutes);
 
 app.use((err, req, res, next) =>{
   const message = err.message || 'An error occurred';
