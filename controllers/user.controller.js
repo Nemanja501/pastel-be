@@ -1,5 +1,7 @@
 const User = require('../models/user.model');
 const constants = require('../shared/constants');
+const bcrypt = require('bcrypt');
+const {validationResult} = require('express-validator');
 
 // finds two users in the database: the one who is being followed by the other user, and the follower
 findFollowerAndUser = async (req, res, next, populatePosts = false) => {
@@ -89,19 +91,20 @@ exports.getEditUserData = async (req, res, next) => {
 }
 
 exports.putEditUser = async (req, res, next) => {
+    const errors = validationResult(req);
+    if(!errors.isEmpty()){
+        const error = new Error('Validation failed');
+        error.statusCode = 422;
+        error.data = errors.array();
+        return next(error);
+    }
     const userId = req.query.userId;
     const userName = req.body.userName;
     const displayName = req.body.displayName;
     const email = req.body.email;
     const password = req.body.password;
-    const confirmPassword = req.body.confirmPassword;
     let hashedPw;
     if(password) {
-        if(password !== confirmPassword) {
-            const error = new Error('Password and password confirmation must match');
-            error.statusCode = 422;
-            return next(error);
-        }
         hashedPw = await bcrypt.hash(password, 12);
     }
     console.log('userId', userId);
