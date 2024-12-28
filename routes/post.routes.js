@@ -10,5 +10,6 @@ router.post('/post', [
 ], isAuth, postController.addPost);
 router.get('/feed', isAuth, postController.getFeedPosts);
 router.get('/explore', isAuth, postController.getExplorePosts);
+router.post('/search', isAuth, postController.postSearch);
 
 module.exports = router;

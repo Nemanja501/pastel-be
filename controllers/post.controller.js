@@ -50,3 +50,45 @@ exports.getExplorePosts = async (req, res, next) =>{
     const posts = await Post.find().populate('user').skip((page - 1) * constants.PER_PAGE).limit(constants.PER_PAGE);
     return res.status(200).json({message: 'Explore posts fetched successfully', posts, page});
 }
+
+exports.postSearch = async (req, res, next) => {
+    const search = req.body.search;
+    const posts = await Post.aggregate([
+        {$match: {
+            "content": {"$regex": search, "$options": "i"}
+        }},
+        {$lookup: {
+            from: "users",
+            localField: "user",
+            foreignField: "_id",
+            as: "user"
+        }},
+        {$unwind: '$user'},
+        {
+            $group: {
+                "_id": "$_id",
+                "content": {"$first": "$content"},
+                "user": {"$first": "$user"}
+            }
+        }
+    ]);
+    const users = await User.aggregate([
+        {$match: {
+            $or: [ {"userName": {"$regex": search, "$options": "i"}}, {"displayName": {"$regex": search, "$options": "i"}} ]
+        }},
+        {
+            $group: {
+                "_id": "$_id",
+                "userName": {"$first": "$userName"},
+                "displayName": {"$first": "$displayName"},
+                "email": {"$first": "$email"},
+                "password": {"$first": "$password"},
+                "posts": {"$push": "$posts"},
+                "following": {"$push": "$following"},
+                "followers": {"$push": "$followers"},
+                
+            }
+        }
+    ])
+    return res.status(200).json({message: 'Search successfull', posts, users});
+}
