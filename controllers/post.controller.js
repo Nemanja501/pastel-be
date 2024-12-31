@@ -1,7 +1,9 @@
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
+const mongoose = require('mongoose');
 const {validationResult} = require('express-validator');
 const constants = require('../shared/constants');
+const ObjectId = mongoose.Types.ObjectId;
 
 exports.addPost = async (req, res, next) =>{
     const errors = validationResult(req);
@@ -32,17 +34,47 @@ exports.addPost = async (req, res, next) =>{
 exports.getFeedPosts = async (req, res, next) =>{
     const userId = req.query.userId;
     const page = req.query.page || 1;
-    const user = await User.findById(userId).populate({ path: 'following', 
-        populate: { path: 'posts', 
-        options: {limit: constants.PER_PAGE, skip: (page - 1) * constants.PER_PAGE, 
-            populate: {path: 'user'}
-        }} 
+    const feed = await User.aggregate([
+        {$match: {_id: ObjectId.createFromHexString(userId)}},  //find the currently logged in user
+        {
+            $lookup: {      //get all the data about the users which the current user follows
+                from: 'users',
+                localField: 'following',
+                foreignField: '_id',
+                as: 'following_info'
+            }
+        },
+        {$unwind: '$following_info'},
+        {$project: {following_info: 1}},
+        {$lookup: {     //get the data about every users posts
+            from: 'posts',
+            localField: 'following_info.posts',
+            foreignField: '_id',
+            as: 'posts'
+        }},
+        {$unwind: '$posts'},
+        {$group: {      //group all the posts from all the users together
+            _id: null,
+            post: {$addToSet: "$posts"}
+        }},
+        {$unwind: '$post'},
+        {$sort: {"post.createdAt": -1}}, //sort by newest
+        {$skip: (page - 1) * constants.PER_PAGE},
+        {$limit: constants.PER_PAGE},
+        {
+            $lookup: {  //get data for author of post
+                from: 'users',
+                localField: 'post.user',
+                foreignField: '_id',
+                as: 'post.user'
+            }
+        },
+        {$unwind: '$post.user'},
+    ]);
+    const posts = feed.map(post => {
+        return post.post;
     })
-    const feedPosts = user.following.map(_user => {
-        return _user.posts;
-    })
-    const posts = feedPosts[0];
-    return res.status(200).json({message: 'Feed posts fetched successfully', posts, page});
+    return res.status(200).json({message: 'Feed posts fetched successfully', posts});
 }
 
 exports.getExplorePosts = async (req, res, next) =>{
