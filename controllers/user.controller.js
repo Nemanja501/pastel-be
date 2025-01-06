@@ -11,7 +11,11 @@ findFollowerAndUser = async (req, res, next, populatePosts = false) => {
     let user;
     const page = req.query.page || 1;
     if(populatePosts) {
-        user = await User.findById(userId).populate({path: 'posts', options: {limit: constants.PER_PAGE, skip: (page - 1) * constants.PER_PAGE}});
+        user = await User.findById(userId).populate({path: 'posts', 
+                    options: {sort: {createdAt: -1},
+                    skip: (page - 1) * constants.PER_PAGE,
+                    limit: constants.PER_PAGE} , 
+        })
     } else {
         user = await User.findById(userId);
     }

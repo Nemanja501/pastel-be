@@ -1,5 +1,6 @@
 const Post = require('../models/post.model');
 const User = require('../models/user.model');
+const Comment = require('../models/comment.model');
 const mongoose = require('mongoose');
 const {validationResult} = require('express-validator');
 const constants = require('../shared/constants');
@@ -79,7 +80,7 @@ exports.getFeedPosts = async (req, res, next) =>{
 
 exports.getExplorePosts = async (req, res, next) =>{
     const page = req.query.page || 1;
-    const posts = await Post.find().populate('user').skip((page - 1) * constants.PER_PAGE).limit(constants.PER_PAGE);
+    const posts = await Post.find().populate('user').sort({createdAt: -1}).skip((page - 1) * constants.PER_PAGE).limit(constants.PER_PAGE);
     return res.status(200).json({message: 'Explore posts fetched successfully', posts, page});
 }
 
@@ -123,4 +124,49 @@ exports.postSearch = async (req, res, next) => {
         }
     ])
     return res.status(200).json({message: 'Search successfull', posts, users});
+}
+
+exports.getSinglePost = async (req, res, next) => {
+    const page = req.query.page || 1;
+    const postId = req.params.postId;
+    const post = await Post.findById(postId).populate('user').populate({path: 'comments', 
+        options: {sort: {createdAt: -1},
+        skip: (page - 1) * constants.PER_PAGE,
+        limit: constants.PER_PAGE} , 
+        populate: {path: 'user'}});
+    return res.status(200).json({message: 'Post fetched successfully', post});
+}
+
+exports.postComment = async (req, res, next) => {
+    const errors = validationResult(req);
+    if(!errors.isEmpty()){
+        const error = new Error('Validation failed');
+        error.statusCode = 422;
+        error.data = errors.array();
+        return next(error);
+    }
+    const postId = req.body.postId;
+    const post = await Post.findById(postId);
+    if(!post) {
+        const error = new Error('Post not found');
+        error.statusCode = 404;
+        return next(error);
+    }
+    const userId = req.body.userId;
+    const user = await User.findById(userId);
+    if(!user) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        return next(error);
+    }
+    const content = req.body.content;
+    const comment = new Comment({
+        content,
+        post: postId,
+        user: userId
+    });
+    await comment.save();
+    post.comments.push(comment);
+    await post.save();
+    return res.status(201).json({message: 'Comment added successfully'});
 }
