@@ -37,21 +37,29 @@ exports.getFeedPosts = async (req, res, next) =>{
     const page = req.query.page || 1;
     const feed = await User.aggregate([
         {$match: {_id: ObjectId.createFromHexString(userId)}},  //find the currently logged in user
-        {
-            $lookup: {      //get all the data about the users which the current user follows
+        {$lookup: {      //get all the data about the users which the current user follows
                 from: 'users',
                 localField: 'following',
                 foreignField: '_id',
                 as: 'following_info'
-            }
-        },
-        {$unwind: '$following_info'},
-        {$project: {following_info: 1}},
+        }},
+        {$lookup: { //get the posts of the currently logged in user
+            from: 'posts',
+            localField: 'posts',
+            foreignField: '_id',
+            as: 'user_posts'
+        }},
+        {$project: {following_info: 1, user_posts: 1}},
         {$lookup: {     //get the data about every users posts
             from: 'posts',
             localField: 'following_info.posts',
             foreignField: '_id',
-            as: 'posts'
+            as: 'following_posts'
+        }},
+        {$project: {  //merge posts from the current user and the users they follow into one array
+            posts: {
+                $setUnion: ["$following_posts", "$user_posts"]
+            }
         }},
         {$unwind: '$posts'},
         {$group: {      //group all the posts from all the users together

@@ -111,7 +111,6 @@ exports.putEditUser = async (req, res, next) => {
     if(password) {
         hashedPw = await bcrypt.hash(password, 12);
     }
-    console.log('userId', userId);
     const user = await User.findById(userId);
     if(!user) {
         const error = new Error('User not found');
