@@ -109,7 +109,8 @@ exports.postSearch = async (req, res, next) => {
             $group: {
                 "_id": "$_id",
                 "content": {"$first": "$content"},
-                "user": {"$first": "$user"}
+                "user": {"$first": "$user"},
+                "createdAt": {"$first": "$createdAt"}
             }
         }
     ]);
